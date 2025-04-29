@@ -1,32 +1,38 @@
-#!/bin/python3
+import LogHandler as loghandler
+from MqttClient import MqttClient
 
-import sys
-import datetime
-import pandas as pd
-import ultralytics as yolo
+APPROVED = False
 
-license_plate_input = sys.argv[1]
-illegal_dataFrame = pd.DataFrame(columns=['illegal_traffic_license_plate'])
-
-filepath = '../log/{date}_illegal_log.csv'
-file = filepath.format(date=datetime.datetime.now().strftime('%Y-%m-%d'))
+def handle_trigger(data, mqtt_client):
+    if data.get("command") is not None:
+        response = {
+            "status": "success",
+            "plate": "AB123CD",
+            "approved": APPROVED
+        }
+        mqtt_client.publish_camera_detected_response(response)
+    else:
+        mqtt_client.publish_camera_trigger_error_response()
 
 def main():
-    print(validate_is_plate_allowed())
+    mqtt_client = MqttClient("client", "123456")
+    mqtt_client.on_trigger_callback = lambda data: handle_trigger(data, mqtt_client)
+    mqtt_client.connect()
 
-def validate_is_plate_allowed():
-    car_plate_data = read_csv_access_allowed()
-    if license_plate_input in car_plate_data.values:
-        print("Exist")
-        return True
+    if mqtt_client.get_mqtt_connection_status():
+        mqtt_client.publish_camera_status("success") # Wenn die Kamera funktioniert
+        mqtt_client.publish_camera_status("camera is ready")
+        loghandler.validate_is_plate_allowed()# CSV Check
     else:
-        print("Not Exist")
-        illegal_dataFrame.loc[len(illegal_dataFrame)] = license_plate_input
-        illegal_dataFrame.to_csv(file, index=False)
-        return False
+        mqtt_client.publish_camera_status("failed") # Wenn die Kamera nicht funktioniert
+        mqtt_client.publish_camera_status("camera is not ready")
 
-def read_csv_access_allowed():
-    return pd.read_csv('../access_allowed.csv')
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        mqtt_client.publish_camera_status("camera disconnected")
+        mqtt_client.disconnect()
 
 if __name__ == '__main__':
     main()
