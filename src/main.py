@@ -1,5 +1,7 @@
 import LogHandler as loghandler
 from MqttClient import MqttClient
+from dotenv import load_dotenv
+import os
 
 APPROVED = False
 
@@ -15,7 +17,8 @@ def handle_trigger(data, mqtt_client):
         mqtt_client.publish_camera_trigger_error_response()
 
 def main():
-    mqtt_client = MqttClient("client", "123456")
+    load_dotenv()
+    mqtt_client = MqttClient(os.getenv("MQTT_USERNAME"), os.getenv("MQTT_PASSWORD"))
     mqtt_client.on_trigger_callback = lambda data: handle_trigger(data, mqtt_client)
     mqtt_client.connect()
 
