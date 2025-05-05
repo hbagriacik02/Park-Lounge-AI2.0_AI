@@ -1,16 +1,15 @@
 import json
-import Time as time
 import paho.mqtt.client as mqtt
 
 CAMERA_STATUS_TOPIC = "parkhaus/camera/response"
 CAMERA_TRIGGER_TOPIC = "parkhaus/camera/trigger"
-CAR_PARK_STATUS_TOPIC = "parkhaus/car/status"
+CAR_PARK_STATUS_TOPIC = "parkhaus/status"
 
 class MqttClient:
     def __init__(self, username, password):
         self.port = 1883
         self.username = username
-        self.broker = "localhost"
+        self.broker = "192.168.144.206"
         self.car_park_status_topic = CAR_PARK_STATUS_TOPIC
         self.camera_trigger_topic = CAMERA_TRIGGER_TOPIC
         self.camera_status_topic = CAMERA_STATUS_TOPIC
@@ -39,12 +38,11 @@ class MqttClient:
         try:
             payload = msg.payload.decode()
             print(f"Incoming request on {msg.topic}: {payload}")
-
             if msg.topic == self.camera_trigger_topic and self.on_trigger_callback:
                 data = json.loads(payload)
                 self.on_trigger_callback(data)
         except Exception as e:
-            print(f"Could not processing message: {e}")
+            print(f"Could not process message: {e}")
 
     def on_publish(self, client, userdata, mid):
         pass
@@ -66,14 +64,10 @@ class MqttClient:
         self.client.disconnect()
         self.is_connected_flag = False
 
-    def get_mqtt_connection_status(self):
-        time.wait_connection_time(5)
-        return self.is_connected_flag
-
     def publish_camera_status(self, message):
         try:
             result = self.client.publish(self.camera_status_topic, json.dumps({'status': message}))
-            print(f"Outgoing response to {self.camera_status_topic}: {json.dumps(message)}")
+            print(f"Outgoing response to {self.camera_status_topic}: {json.dumps({'status': message})}")
             return result
         except Exception as e:
             print(f"Publish error: {e}")
@@ -90,8 +84,8 @@ class MqttClient:
 
     def publish_camera_trigger_error_response(self):
         try:
-            result = self.client.publish(self.camera_status_topic, json.dumps({"status": "Invalid trigger message received"}))
-            print(f"Outgoing response to {self.camera_status_topic}: {json.dumps({'status': "Invalid trigger message received"})}")
+            result = self.client.publish(self.camera_status_topic, json.dumps({"message": "Invalid trigger message received"}))
+            print(f"Outgoing response to {self.camera_status_topic}: {json.dumps({'message': 'Invalid trigger message received'})}")
             return result
         except Exception as e:
             print(f"Publish error: {e}")
